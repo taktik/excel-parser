@@ -98,7 +98,8 @@
 					type: Array,
 					value: function() {
 						return [];
-					}
+					},
+					observer: 'keepKeysChanged'
 				},
 				callback: Object,
 				postUrl: String,
@@ -109,6 +110,10 @@
 
 			ready: function() {
 				this.$.toast.fitInto = this.$.dialog;
+			},
+
+			keepKeysChanged: function(keys) {
+				this.set('columns', keys);
 			},
 
 			_selectedItemsChanged: function() {
