@@ -90,18 +90,15 @@
 					notify: true,
 					observer: '_lastParsedChanged'
 				},
-				buttonText: {
-					type: String,
-					value: 'Select file'
-				},
 				camelCase: {
 					type: Boolean,
 					value: true
 				},
 				keepKeys: {
-					type: String,
-					value: "",
-					observer: '_keepKeysChanged'
+					type: Array,
+					value: function() {
+						return [];
+					}
 				},
 				callback: Object,
 				postUrl: String,
@@ -120,12 +117,6 @@
 				} else {
 					this.set('confirmButtonDisabled', true);
 				}
-			},
-
-			_keepKeysChanged: function (s) {
-				var list = s === "" ? [] : s.split(',');
-				this.set('keepKeysList', list);
-				this.set('columns', list);
 			},
 
 			_lastParsedChanged: function (list) {
@@ -148,7 +139,7 @@
 						var data = e.target.result;
 						var workBook = XLSX.read(data, {type: 'binary'});
 						var list = this._toJson(workBook);
-						if (this.keepKeysList.length === 0) {
+						if (this.keepKeys.length === 0) {
 							this.set('columns', this._getColumns(list));
 						} else {
 							list = this._filterKeys(list);
@@ -220,7 +211,7 @@
 			},
 
 			_filterKeys: function(list) {
-				var keys = this.keepKeysList;
+				var keys = this.keepKeys;
 				return list.map(function (obj) {
 					var res = {};
 					keys.forEach(function (key) {
