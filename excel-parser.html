@@ -1,0 +1,278 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-ajax/iron-ajax.html">
+<link rel="import" href="../paper-dialog/paper-dialog.html">
+<link rel="import" href="../paper-button/paper-button.html">
+<link rel="import" href="../paper-toast/paper-toast.html">
+<link rel="import" href="../vaadin-grid/vaadin-grid.html">
+<link rel="import" href="../vaadin-grid/vaadin-grid-selection-column.html">
+
+<!--
+`excel-parser`
+
+
+@demo demo/index.html
+-->
+
+<dom-module id="excel-parser">
+	<template>
+		<style>
+			#dialog {
+				width: 80%;
+				padding: 15px 20px 0 20px;
+			}
+
+			#grid {
+				margin-top: 15px;
+				@apply(--excel-parser-grid);
+			}
+
+			#cancel-button {
+				@apply(--excel-parser-cancel-button);
+			}
+
+			#confirm-button {
+				@apply(--excel-parser-confirm-button);
+			}
+
+			#errorMessage {
+				@apply(--layout-flex);
+				padding-top: 9px;
+				color: red;
+			}
+		</style>
+		<input id="fileInput" type="file" on-change="_parseFile"/>
+		<paper-dialog id="dialog" with-backdrop modal>
+			From file [[lastParsedFile]] :
+			<vaadin-grid id="grid" items="[[lastParsed]]" selected-items="{{selectedItems}}">
+				<vaadin-grid-selection-column auto-select></vaadin-grid-selection-column>
+				<vaadin-grid-column width="50px" flex-grow="0">
+					<template class="header">#</template>
+					<template>[[index]]</template>
+				</vaadin-grid-column>
+				<template is="dom-repeat" items="[[columns]]" as="column">
+					<vaadin-grid-column>
+						<template class="header">[[column]]</template>
+						<template>[[_getString(column, item)]]</template>
+					</vaadin-grid-column>
+				</template>
+			</vaadin-grid>
+			<div class="buttons">
+				<template is="dom-if" if="[[ajaxFailed]]">
+					<div id="errorMessage">Request failed</div>
+				</template>
+				<paper-button id="cancel-button" dialog-dismiss>Cancel</paper-button>
+				<paper-button id="confirm-button" on-tap="_processSelected" disabled="[[confirmButtonDisabled]]">Confirm</paper-button>
+			</div>
+		</paper-dialog>
+		<paper-toast id="toast"
+					 class="fit-bottom"
+					 text="Elements from [[lastParsedFile]] successfully sent"
+					 on-iron-overlay-closed="_toastClosed"></paper-toast>
+		<template is="dom-if" if="[[url]]">
+			<iron-ajax id="postAjax"
+					   url="[[url]]"
+					   headers="[[headers]]"
+					   method="POST"
+					   handle-as="json"
+					   on-response="_onPostResponse"
+					   on-error="_onPostError"></iron-ajax>
+		</template>
+	</template>
+
+	<script src="../js-xlsx/dist/xlsx.core.min.js"></script>
+	<script>
+		Polymer({
+			is: 'excel-parser',
+
+			properties: {
+				lastParsed: {
+					type: Array,
+					notify: true,
+					observer: '_lastParsedChanged'
+				},
+				buttonText: {
+					type: String,
+					value: 'Select file'
+				},
+				camelCase: {
+					type: Boolean,
+					value: true
+				},
+				keepKeys: {
+					type: String,
+					value: "",
+					observer: '_keepKeysChanged'
+				},
+				callback: Object,
+				postUrl: String,
+				headers: Object
+			},
+
+			observers: ['_selectedItemsChanged(selectedItems.*)'],
+
+			ready: function() {
+				this.$.toast.fitInto = this.$.dialog;
+			},
+
+			_selectedItemsChanged: function() {
+				if (this.selectedItems.length > 0) {
+					this.set('confirmButtonDisabled', false)
+				} else {
+					this.set('confirmButtonDisabled', true);
+				}
+			},
+
+			_keepKeysChanged: function (s) {
+				var list = s === "" ? [] : s.split(',');
+				this.set('keepKeysList', list);
+				this.set('columns', list);
+			},
+
+			_lastParsedChanged: function (list) {
+				console.log('Parsed the following items :');
+				console.log(list);
+				if (this.callback || this.url) {
+					this.ajaxFailed = false;
+					this.$.dialog.open();
+				}
+			},
+
+			_parseFile: function () {
+				var files = this.$.fileInput.files;
+				if (files.length > 0) {
+					var file = files[0];
+					var reader = new FileReader();
+					var fileName = file.name;
+					this.set('lastParsedFile', fileName);
+					reader.onload = function (e) {
+						var data = e.target.result;
+						var workBook = XLSX.read(data, {type: 'binary'});
+						var list = this._toJson(workBook);
+						if (this.keepKeysList.length === 0) {
+							this.set('columns', this._getColumns(list));
+						} else {
+							list = this._filterKeys(list);
+						}
+						this.set('lastParsed', list);
+					}.bind(this);
+					reader.readAsBinaryString(file);
+				}
+			},
+
+			_toJson: function (workBook) {
+				if (workBook.SheetNames.length > 0) {
+					var list = XLSX.utils.sheet_to_json(workBook.Sheets[workBook.SheetNames[0]]);
+					return list.map(this._mapColumns.bind(this));
+				} else {
+					return [];
+				}
+			},
+
+			_mapColumns: function (obj) {
+				var res = {};
+				Object.keys(obj).forEach(function (key) {
+					var parts = key.split('_');
+					if (parts.length > 1) {
+						var newKey = this._toCamelCase(parts.slice(0, parts.length - 1).join(' '));
+						res[newKey] = res[newKey] || {};
+						res[newKey][parts[parts.length - 1]] = obj[key];
+					} else {
+						var newKey = this._toCamelCase(key);
+						res[newKey] = obj[key];
+					}
+				}.bind(this));
+				return res;
+			},
+
+			_toCamelCase: function (s) {
+				if (!this.camelCase) {
+					return s;
+				}
+
+				var parts = s.replace(/\s+/g, ' ').split(' ');
+				if (parts.length > 1) {
+					parts[0] = this._uncapitalize(parts[0]);
+					for (var i = 1; i < parts.length; i++) {
+						parts[i] = this._capitalize(parts[i]);
+					}
+					return parts.join('');
+				} else {
+					return this._uncapitalize(s);
+				}
+			},
+
+			_capitalize: function (s) {
+				return s.charAt(0).toUpperCase() + s.slice(1);
+			},
+
+			_uncapitalize: function (s) {
+				return s.charAt(0).toLowerCase() + s.slice(1);
+			},
+
+			_getColumns: function (list) {
+				var res = {};
+				list.forEach(function (obj) {
+					Object.keys(obj).forEach(function (key) {
+						res[key] = 0;
+					})
+				});
+				return Object.keys(res);
+			},
+
+			_filterKeys: function(list) {
+				var keys = this.keepKeysList;
+				return list.map(function (obj) {
+					var res = {};
+					keys.forEach(function (key) {
+						if (key in obj) {
+							res[key] = obj[key];
+						}
+					});
+					return res;
+				});
+			},
+
+			_processSelected: function() {
+				var selectedItems = this.selectedItems;
+				if (this.sendingAjax || selectedItems.length === 0) {
+					return;
+				}
+
+				if (this.callback) {
+					this.callback(selectedItems);
+				}
+
+				if (this.url) {
+					this.sendingAjax = true;
+					this.ajaxFailed = false;
+					var ajax = this.$$('#postAjax');
+					ajax.body = JSON.stringify(selectedItems);
+					ajax.generateRequest();
+				}
+			},
+
+			_onPostResponse: function(response) {
+				this.$.toast.open();
+				this.sendingAjax = false;
+			},
+
+			_onPostError: function(event) {
+				this.sendingAjax = false;
+				this.ajaxFailed = true;
+			},
+
+			_getString: function(column, item) {
+				var cellContent = this.get(column, item);
+				if (typeof cellContent === 'object') {
+					return JSON.stringify(cellContent);
+				} else {
+					return cellContent;
+				}
+			},
+
+			_toastClosed: function() {
+				this.$.dialog.close();
+			}
+		});
+	</script>
+</dom-module>
