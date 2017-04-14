@@ -23,6 +23,7 @@
 
 			#grid {
 				margin-top: 15px;
+				height: 300px;
 				@apply(--excel-parser-grid);
 			}
 
@@ -74,6 +75,7 @@
 					   headers="[[headers]]"
 					   method="POST"
 					   handle-as="json"
+					   content-type="application/json"
 					   on-response="_onPostResponse"
 					   on-error="_onPostError"></iron-ajax>
 		</template>
