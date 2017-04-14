@@ -57,7 +57,7 @@
 				</template>
 			</vaadin-grid>
 			<div class="buttons">
-				<template is="dom-if" if="[[ajaxFailed]]">
+				<template is="dom-if" if="[[processingFailed]]">
 					<div id="errorMessage">Request failed</div>
 				</template>
 				<paper-button id="cancel-button" dialog-dismiss>Cancel</paper-button>
@@ -128,7 +128,7 @@
 				console.log('Parsed the following items :');
 				console.log(list);
 				if (this.callback || this.url) {
-					this.ajaxFailed = false;
+					this.processingFailed = false;
 					this.$.dialog.open();
 				}
 			},
@@ -234,13 +234,19 @@
 					return;
 				}
 
-				if (this.callback) {
-					this.callback(selectedItems);
-				}
+				this.processingFailed = false;
 
-				if (this.url) {
+				// Callback
+				if (this.callback) {
+					var successHandle = function() {
+						this.$.toast.open();
+					}.bind(this);
+					var errorHandle = function() {
+						this.processingFailed = true;
+					}.bind(this);
+					this.callback(selectedItems, successHandle, errorHandle);
+				} else if (this.url) { // Post to url
 					this.sendingAjax = true;
-					this.ajaxFailed = false;
 					var ajax = this.$$('#postAjax');
 					ajax.body = JSON.stringify(selectedItems);
 					ajax.generateRequest();
@@ -254,7 +260,7 @@
 
 			_onPostError: function(event) {
 				this.sendingAjax = false;
-				this.ajaxFailed = true;
+				this.processingFailed = true;
 			},
 
 			_getString: function(column, item) {
