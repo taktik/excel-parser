@@ -41,7 +41,9 @@
 				color: red;
 			}
 		</style>
-		<input id="fileInput" type="file" on-change="_parseFile"/>
+		<form id="inputForm">
+			<paper-input id="fileInput" type="file" on-change="_parseFile" on-click="_resetFile"/>
+		</form>
 		<paper-dialog id="dialog" with-backdrop modal>
 			From file [[lastParsedFile]] :
 			<vaadin-grid id="grid" items="[[lastParsed]]" selected-items="{{selectedItems}}">
@@ -135,8 +137,13 @@
 				}
 			},
 
+			_resetFile: function () {
+			    debugger
+				this.$.inputForm.reset();
+			},
+
 			_parseFile: function () {
-				var files = this.$.fileInput.files;
+				var files = this.$.fileInput.inputElement.files;
 				if (files.length > 0) {
 					var file = files[0];
 					var reader = new FileReader();
