@@ -140,7 +140,7 @@
 			_resetFile: function () {
 				this.$.inputForm.reset();
 			},
-
+			
 			_parseFile: function () {
 				var files = this.$.fileInput.files;
 				if (files.length > 0) {
@@ -282,6 +282,10 @@
 
 			_toastClosed: function() {
 				this.$.dialog.close();
+			},
+
+			openFileInput: function() {
+				this.$.fileInput.click()
 			}
 		});
 	</script>
