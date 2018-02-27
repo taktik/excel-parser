@@ -42,7 +42,7 @@
 			}
 		</style>
 		<form id="inputForm">
-			<input id="fileInput" type="file" on-change="_parseFile" on-click="_resetFile"/>
+			<input id="fileInput" type="file" on-change="_inputChanged" on-click="_resetFile"/>
 		</form>
 		<paper-dialog id="dialog" with-backdrop modal>
 			From file [[lastParsedFile]] :
@@ -89,6 +89,7 @@
 			is: 'excel-parser',
 
 			properties: {
+				file: Object,
 				lastParsed: {
 					type: Array,
 					notify: true,
@@ -128,6 +129,11 @@
 				}
 			},
 
+			_inputChanged: function(e){
+				this.set('file', e.target.files[0])
+				this.parseFile()
+			},
+
 			_lastParsedChanged: function (list) {
 				console.log('Parsed the following items :');
 				console.log(list);
@@ -140,16 +146,13 @@
 			_resetFile: function () {
 				this.$.inputForm.reset();
 			},
-			
-			_parseFile: function () {
-				var files = this.$.fileInput.files;
-				if (files.length > 0) {
-					var file = files[0];
+
+			parseFile: function () {
+				return new Promise(function(resolve, reject) {
 					var reader = new FileReader();
-					var fileName = file.name;
-					this.set('lastParsedFile', fileName);
+					this.set('lastParsedFile', this.file.name);
 					reader.onload = function (e) {
-						var data = e.target.result;
+						var data = reader.result;
 						var workBook = XLSX.read(data, {type: 'binary'});
 						var list = this._toJson(workBook);
 						if (this.keepKeys.length === 0) {
@@ -158,9 +161,13 @@
 							list = this._filterKeys(list);
 						}
 						this.set('lastParsed', list);
+						resolve(list)
 					}.bind(this);
-					reader.readAsBinaryString(file);
-				}
+					reader.readAsBinaryString(this.file)
+				}.bind(this))
+				.then(lastParsed => lastParsed)
+
+
 			},
 
 			_toJson: function (workBook) {
