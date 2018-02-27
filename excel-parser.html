@@ -165,7 +165,9 @@
 					}.bind(this);
 					reader.readAsBinaryString(this.file)
 				}.bind(this))
-				.then(lastParsed => lastParsed)
+				.then(function(lastParsed){
+					return lastParsed
+				})
 
 
 			},
