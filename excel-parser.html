@@ -1,10 +1,4 @@
 <link rel="import" href="../polymer/polymer.html">
-<link rel="import" href="../iron-ajax/iron-ajax.html">
-<link rel="import" href="../paper-dialog/paper-dialog.html">
-<link rel="import" href="../paper-button/paper-button.html">
-<link rel="import" href="../paper-toast/paper-toast.html">
-<link rel="import" href="../vaadin-grid/vaadin-grid.html">
-<link rel="import" href="../vaadin-grid/vaadin-grid-selection-column.html">
 
 <!--
 `excel-parser`
@@ -44,43 +38,6 @@
 		<form id="inputForm">
 			<input id="fileInput" type="file" on-change="_inputChanged" on-click="_resetFile"/>
 		</form>
-		<paper-dialog id="dialog" with-backdrop modal>
-			From file [[lastParsedFile]] :
-			<vaadin-grid id="grid" items="[[lastParsed]]" selected-items="{{selectedItems}}">
-				<vaadin-grid-selection-column auto-select></vaadin-grid-selection-column>
-				<vaadin-grid-column width="50px" flex-grow="0">
-					<template class="header">#</template>
-					<template>[[index]]</template>
-				</vaadin-grid-column>
-				<template is="dom-repeat" items="[[columns]]" as="column">
-					<vaadin-grid-column>
-						<template class="header">[[column]]</template>
-						<template>[[_getString(column, item)]]</template>
-					</vaadin-grid-column>
-				</template>
-			</vaadin-grid>
-			<div class="buttons">
-				<template is="dom-if" if="[[processingFailed]]">
-					<div id="errorMessage">Request failed</div>
-				</template>
-				<paper-button id="cancel-button" dialog-dismiss>Cancel</paper-button>
-				<paper-button id="confirm-button" on-tap="_processSelected" disabled="[[confirmButtonDisabled]]">Confirm</paper-button>
-			</div>
-		</paper-dialog>
-		<paper-toast id="toast"
-					 class="fit-bottom"
-					 text="Elements from [[lastParsedFile]] successfully sent"
-					 on-iron-overlay-closed="_toastClosed"></paper-toast>
-		<template is="dom-if" if="[[url]]">
-			<iron-ajax id="postAjax"
-					   url="[[url]]"
-					   headers="[[headers]]"
-					   method="POST"
-					   handle-as="json"
-					   content-type="application/json"
-					   on-response="_onPostResponse"
-					   on-error="_onPostError"></iron-ajax>
-		</template>
 	</template>
 
 	<script src="../js-xlsx/dist/xlsx.core.min.js"></script>
@@ -106,16 +63,11 @@
 					},
 					observer: 'keepKeysChanged'
 				},
-				callback: Object,
-				url: String,
 				headers: Object
 			},
 
 			observers: ['_selectedItemsChanged(selectedItems.*)'],
 
-			ready: function() {
-				this.$.toast.fitInto = this.$.dialog;
-			},
 
 			keepKeysChanged: function(keys) {
 				this.set('columns', keys);
@@ -137,10 +89,6 @@
 			_lastParsedChanged: function (list) {
 				console.log('Parsed the following items :');
 				console.log(list);
-				if (this.callback || this.url) {
-					this.processingFailed = false;
-					this.$.dialog.open();
-				}
 			},
 
 			_resetFile: function () {
@@ -245,40 +193,7 @@
 				});
 			},
 
-			_processSelected: function() {
-				var selectedItems = this.selectedItems;
-				if (this.sendingAjax || selectedItems.length === 0) {
-					return;
-				}
 
-				this.processingFailed = false;
-
-				// Callback
-				if (this.callback) {
-					var successHandle = function() {
-						this.$.toast.open();
-					}.bind(this);
-					var errorHandle = function() {
-						this.processingFailed = true;
-					}.bind(this);
-					this.callback(selectedItems, successHandle, errorHandle);
-				} else if (this.url) { // Post to url
-					this.sendingAjax = true;
-					var ajax = this.$$('#postAjax');
-					ajax.body = JSON.stringify(selectedItems);
-					ajax.generateRequest();
-				}
-			},
-
-			_onPostResponse: function(response) {
-				this.$.toast.open();
-				this.sendingAjax = false;
-			},
-
-			_onPostError: function(event) {
-				this.sendingAjax = false;
-				this.processingFailed = true;
-			},
 
 			_getString: function(column, item) {
 				var cellContent = this.get(column, item);
@@ -287,10 +202,6 @@
 				} else {
 					return cellContent;
 				}
-			},
-
-			_toastClosed: function() {
-				this.$.dialog.close();
 			},
 
 			openFileInput: function() {

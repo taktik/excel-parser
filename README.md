@@ -10,19 +10,10 @@ Add the dependency to your bower.json
 ```
 <excel-parser
         id="parser"
-        url="http://127.0.0.1:8080"
         last-parsed="{{lastParsed}}"
         keep-keys='["name","channelType","index","multicastUrl"]'></excel-parser>
 
 <script>
-// Use either a callback or a URL as shown above
-this.$.parser.callback = function(selectedItems, successHandle, errorHandle) {
-    var processingSucceeded = process(selectedItems);
-    if (processingSucceeded) {
-        successHandle();
-    } else {
-        errorHandle();
-    }
-}
+
 </script>
 ```
