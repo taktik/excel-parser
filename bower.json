@@ -3,7 +3,7 @@
 	"main": "excel-parser.html",
 	"dependencies": {
 		"polymer": "Polymer/Polymer#^2.6.0",
-		"js-xlsx": "^0.9.10"
+		"js-xlsx": "^0.12.6"
 	},
 	"devDependencies": {
 	}
