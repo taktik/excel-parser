@@ -1,71 +1,68 @@
-/**
-`excel-parser`
-
-
-@demo demo/index.html
-*/
-/*
-  FIXME(polymer-modulizer): the above comments were extracted
-  from HTML and may be out of place here. Review them and
-  then delete this comment!
-*/
-import "../@polymer/polymer/polymer-legacy.js";
-
-import { Polymer } from "../@polymer/polymer/lib/legacy/polymer-fn.js";
+import { PolymerElement } from "@polymer/polymer";
 import "../js-xlsx/dist/xlsx.core.min.js";
-Polymer({
-  is: "excel-parser",
 
-  properties: {
-    file: Object,
-    lastParsed: {
-      type: Array,
-      notify: true,
-      observer: "_lastParsedChanged",
-    },
-    camelCase: {
-      type: Boolean,
-      value: true,
-    },
-    keepKeys: {
-      type: Array,
-      value: function () {
-        return [];
+class ExcelParser extends PolymerElement {
+  static get is() {
+    return "excel-parser";
+  }
+
+  static get properties() {
+    return {
+      file: Object,
+      lastParsed: {
+        type: Array,
+        notify: true,
+        observer: "_lastParsedChanged",
       },
-      observer: "keepKeysChanged",
-    },
-    headers: Object,
-  },
+      camelCase: {
+        type: Boolean,
+        value: true,
+      },
+      keepKeys: {
+        type: Array,
+        value: function () {
+          return [];
+        },
+        observer: "keepKeysChanged",
+      },
+      headers: Object,
+    };
+  }
 
-  observers: ["_selectedItemsChanged(selectedItems.*)"],
+  static get observers() {
+    return [
+      // Observer method name, followed by a list of dependencies, in parenthesis
+      "_selectedItemsChanged(selectedItems.*)",
+    ];
+  }
 
-  keepKeysChanged: function (keys) {
+  keepKeysChanged(keys) {
     this.set("columns", keys);
-  },
+  }
 
-  _selectedItemsChanged: function () {
+  _selectedItemsChanged() {
     if (this.selectedItems.length > 0) {
       this.set("confirmButtonDisabled", false);
     } else {
       this.set("confirmButtonDisabled", true);
     }
-  },
+  }
 
-  _inputChanged: function (e) {
+  _inputChanged(e) {
     this.set("file", e.target.files[0]);
     this.parseFile();
-  },
+  }
 
-  _lastParsedChanged: function (list) {
+  _lastParsedChanged(list) {
     console.log("Parsed the following items :");
     console.log(list);
-  },
+  }
 
-  _resetFile: function () {
+  _resetFile() {
     this.$.inputForm.reset();
-  },
+  }
 
-  parseFile: function () {
+  parseFile() {
     return new Promise(
       function (resolve, reject) {
         var reader = new FileReader();
@@ -87,9 +84,9 @@ Polymer({
     ).then(function (lastParsed) {
       return lastParsed;
     });
-  },
+  }
 
-  _toJson: function (workBook) {
+  _toJson(workBook) {
     if (workBook.SheetNames.length > 0) {
       var list = XLSX.utils.sheet_to_json(
         workBook.Sheets[workBook.SheetNames[0]]
@@ -98,9 +95,9 @@ Polymer({
     } else {
       return [];
     }
-  },
+  }
 
-  _mapColumns: function (obj) {
+  _mapColumns(obj) {
     var res = {};
     Object.keys(obj).forEach(
       function (key) {
@@ -118,9 +115,9 @@ Polymer({
       }.bind(this)
     );
     return res;
-  },
+  }
 
-  _toCamelCase: function (s) {
+  _toCamelCase(s) {
     if (!this.camelCase) {
       return s;
     }
@@ -135,17 +132,17 @@ Polymer({
     } else {
       return this._uncapitalize(s);
     }
-  },
+  }
 
-  _capitalize: function (s) {
+  _capitalize(s) {
     return s.charAt(0).toUpperCase() + s.slice(1);
-  },
+  }
 
-  _uncapitalize: function (s) {
+  _uncapitalize(s) {
     return s.charAt(0).toLowerCase() + s.slice(1);
-  },
+  }
 
-  _getColumns: function (list) {
+  _getColumns(list) {
     var res = {};
     list.forEach(function (obj) {
       Object.keys(obj).forEach(function (key) {
@@ -153,9 +150,9 @@ Polymer({
       });
     });
     return Object.keys(res);
-  },
+  }
 
-  _filterKeys: function (list) {
+  _filterKeys(list) {
     var keys = this.keepKeys;
     return list.map(function (obj) {
       var res = {};
@@ -166,18 +163,20 @@ Polymer({
       });
       return res;
     });
-  },
+  }
 
-  _getString: function (column, item) {
+  _getString(column, item) {
     var cellContent = this.get(column, item);
     if (typeof cellContent === "object") {
       return JSON.stringify(cellContent);
     } else {
       return cellContent;
     }
-  },
+  }
 
-  openFileInput: function () {
+  openFileInput() {
     this.$.fileInput.click();
-  },
-});
+  }
+}
+
+customElements.define("excel-parser", ExcelParser);
