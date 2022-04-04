@@ -40,9 +40,26 @@
 				padding-top: 9px;
 				color: red;
 			}
+			.custom-file-upload-btn {
+				border: 1px solid #ccc;
+				display: inline-block;
+				padding: 4px 12px;
+				cursor: pointer;
+				@apply --custom-file-button;
+			}
+			.custom-file-upload-btn:hover {
+				@apply --custom-file-button-hover;
+			}
+			.custom-file-upload-btn #fileInput {
+				position: absolute;
+				left: -99999rem;
+			}
 		</style>
 		<form id="inputForm">
-			<input id="fileInput" type="file" on-change="_inputChanged" on-click="_resetFile"/>
+			<label class="custom-file-upload-btn">
+				<input id="fileInput" type="file" on-change="_inputChanged" on-click="_resetFile"/>
+			</label>
+			<span id="fileName">[[file.name]]</span>
 		</form>
 		<paper-dialog id="dialog" with-backdrop modal>
 			From file [[lastParsedFile]] :
