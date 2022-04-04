@@ -40,6 +40,12 @@
 				padding-top: 9px;
 				color: red;
 			}
+			#inputForm {
+				display: flex;
+				flex-flow: row wrap;
+				align-items: baseline;
+				justify-content: flex-start;
+			}
 			.custom-file-upload-btn {
 				border: 1px solid #ccc;
 				display: inline-block;
@@ -54,10 +60,15 @@
 				position: absolute;
 				left: -99999rem;
 			}
+			#fileName {
+				font-size: 12px;
+				@apply --file-name;
+			}
 		</style>
 		<form id="inputForm">
 			<label class="custom-file-upload-btn">
 				<input id="fileInput" type="file" on-change="_inputChanged" on-click="_resetFile"/>
+				Upload file
 			</label>
 			<span id="fileName">[[file.name]]</span>
 		</form>
